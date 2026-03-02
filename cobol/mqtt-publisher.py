@@ -57,6 +57,12 @@ def process_flights(data):
         if not (-45 <= lat <= -9 and 110 <= lon <= 155):
             continue
 
+        # Filter to major Australian carriers only
+        prefix = callsign[:3].upper()
+        if prefix not in ("QFA", "VOZ", "VAU", "JST", "QJE"):
+            # QFA = Qantas, VOZ/VAU = Virgin Australia, JST = Jetstar, QJE = QantasLink
+            continue
+
         flights.append({
             "callsign": callsign,
             "lat": round(float(lat), 3),
