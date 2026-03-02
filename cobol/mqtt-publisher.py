@@ -2,11 +2,10 @@
 """
 GreenSky MQTT Publisher
 
-Fetches live flight data from the OpenSky Network API for Australian airspace,
-processes it, and publishes to MQTT topic greensky/flights every 30 seconds.
+Fetches live flight data from adsb.lol API for Australian airspace,
+and publishes to MQTT topic greensky/flights.
 
-The COBOL binary (flight-tracker) handles data validation/processing.
-This Python wrapper handles HTTP fetching and MQTT transport.
+Uses adsb.lol — a free, open ADS-B aggregator with no auth required.
 """
 
 import json
@@ -24,96 +23,54 @@ MQTT_PORT = int(os.environ.get("MQTT_PORT", "1883"))
 MQTT_TOPIC = "greensky/flights"
 FETCH_INTERVAL = int(os.environ.get("FETCH_INTERVAL", "30"))
 
-# OpenSky API — Australian bounding box
-OPENSKY_URL = "https://opensky-network.org/api/states/all"
-OPENSKY_PARAMS = "lamin=-44&lamax=-10&lomin=112&lomax=154"
-OPENSKY_USERNAME = os.environ.get("OPENSKY_USERNAME", "")
-OPENSKY_PASSWORD = os.environ.get("OPENSKY_PASSWORD", "")
-
-# Path to compiled COBOL binary for data processing
-COBOL_BINARY = os.environ.get("COBOL_BINARY", "/app/flight-tracker")
+# adsb.lol API — centre of Australia, 2000km radius covers the continent
+ADSB_URL = "https://api.adsb.lol/v2/lat/-25.27/lon/133.77/dist/2000"
 
 
-def fetch_opensky():
-    """Fetch flight data from OpenSky Network API using curl."""
-    url = f"{OPENSKY_URL}?{OPENSKY_PARAMS}"
-    cmd = ["curl", "-sf", "--max-time", "15", url]
-
-    if OPENSKY_USERNAME and OPENSKY_PASSWORD:
-        cmd.extend(["-u", f"{OPENSKY_USERNAME}:{OPENSKY_PASSWORD}"])
-
+def fetch_flights():
+    """Fetch flight data from adsb.lol API."""
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=20)
+        result = subprocess.run(
+            ["curl", "-sf", "--max-time", "15", ADSB_URL],
+            capture_output=True, text=True, timeout=20
+        )
         if result.returncode != 0:
-            print(f"[WARN] OpenSky API returned non-zero: {result.returncode}", file=sys.stderr)
+            print(f"[WARN] adsb.lol API returned non-zero: {result.returncode}", file=sys.stderr)
             return None
         return json.loads(result.stdout)
     except (subprocess.TimeoutExpired, json.JSONDecodeError, Exception) as e:
-        print(f"[ERROR] Failed to fetch OpenSky data: {e}", file=sys.stderr)
+        print(f"[ERROR] Failed to fetch flight data: {e}", file=sys.stderr)
         return None
 
 
-def process_with_cobol(raw_json):
-    """
-    Pass raw OpenSky JSON through the COBOL binary for processing.
-    The COBOL program reads JSON from stdin and writes processed JSON to stdout.
-    Falls back to Python processing if COBOL binary is not available.
-    """
-    if os.path.isfile(COBOL_BINARY):
-        try:
-            result = subprocess.run(
-                [COBOL_BINARY],
-                input=json.dumps(raw_json),
-                capture_output=True,
-                text=True,
-                timeout=10,
-            )
-            if result.returncode == 0 and result.stdout.strip():
-                return json.loads(result.stdout)
-        except Exception as e:
-            print(f"[WARN] COBOL processing failed, using Python fallback: {e}", file=sys.stderr)
-
-    # Python fallback — process OpenSky states into our format
-    return process_flights_python(raw_json)
-
-
-def process_flights_python(data):
-    """Process raw OpenSky API response into GreenSky flight format."""
-    if not data or "states" not in data:
+def process_flights(data):
+    """Process adsb.lol response into GreenSky format."""
+    if not data or "ac" not in data:
         return {"timestamp": datetime.now(timezone.utc).isoformat(), "flights": []}
 
     flights = []
-    for state in data["states"]:
-        # OpenSky state vector indices:
-        # 0: icao24, 1: callsign, 2: origin_country
-        # 5: longitude, 6: latitude, 7: baro_altitude
-        # 9: velocity, 10: true_track, 11: vertical_rate
-        # 8: on_ground
-        callsign = (state[1] or "").strip()
-        lat = state[6]
-        lon = state[5]
-        altitude = state[7]
-        velocity = state[9]
-        heading = state[10]
-        on_ground = state[8]
+    for ac in data["ac"]:
+        callsign = (ac.get("flight") or "").strip()
+        lat = ac.get("lat")
+        lon = ac.get("lon")
 
-        # Skip entries with missing position data
-        if lat is None or lon is None:
+        # Skip entries missing position or callsign
+        if lat is None or lon is None or not callsign:
             continue
 
-        # Skip empty callsigns
-        if not callsign:
+        # Filter to Australian bounding box (generous)
+        if not (-45 <= lat <= -9 and 110 <= lon <= 155):
             continue
 
         flights.append({
             "callsign": callsign,
-            "lat": round(lat, 3),
-            "lon": round(lon, 3),
-            "altitude": round(altitude, 0) if altitude else 0,
-            "velocity": round(velocity, 1) if velocity else 0,
-            "heading": round(heading, 1) if heading else 0,
+            "lat": round(float(lat), 3),
+            "lon": round(float(lon), 3),
+            "altitude": round(float(ac.get("alt_baro", 0) or 0), 0),
+            "velocity": round(float(ac.get("gs", 0) or 0), 1),
+            "heading": round(float(ac.get("track", 0) or 0), 1),
             "origin": "",
-            "on_ground": on_ground,
+            "on_ground": bool(ac.get("alt_baro") == "ground"),
         })
 
     return {
@@ -127,9 +84,10 @@ def main():
     print(f"[INFO] Broker: {MQTT_BROKER}:{MQTT_PORT}", file=sys.stderr)
     print(f"[INFO] Topic: {MQTT_TOPIC}", file=sys.stderr)
     print(f"[INFO] Interval: {FETCH_INTERVAL}s", file=sys.stderr)
+    print(f"[INFO] Data source: adsb.lol", file=sys.stderr)
 
     # Connect to MQTT
-    client = mqtt.Client(client_id="greensky-publisher", protocol=mqtt.MQTTv311)
+    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id="greensky-publisher")
 
     connected = False
     while not connected:
@@ -145,15 +103,15 @@ def main():
     # Main loop
     while True:
         try:
-            raw = fetch_opensky()
+            raw = fetch_flights()
             if raw:
-                processed = process_with_cobol(raw)
+                processed = process_flights(raw)
                 payload = json.dumps(processed)
                 client.publish(MQTT_TOPIC, payload, qos=0)
                 flight_count = len(processed.get("flights", []))
                 print(f"[INFO] Published {flight_count} flights", file=sys.stderr)
             else:
-                print("[WARN] No data from OpenSky, skipping publish", file=sys.stderr)
+                print("[WARN] No data, skipping publish", file=sys.stderr)
         except Exception as e:
             print(f"[ERROR] Publish loop error: {e}", file=sys.stderr)
 
