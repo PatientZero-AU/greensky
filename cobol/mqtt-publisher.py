@@ -116,19 +116,22 @@ def main():
     print(f"[INFO] Broker: {MQTT_BROKER}:{MQTT_PORT}", file=sys.stderr, flush=True)
     print(f"[INFO] Fetch interval: {FETCH_INTERVAL}s (when viewers active)", file=sys.stderr, flush=True)
 
+    def on_connect(client, userdata, flags, rc, properties=None):
+        print(f"[INFO] Connected to MQTT broker (rc={rc})", file=sys.stderr, flush=True)
+        client.subscribe(MQTT_PRESENCE_TOPIC, qos=0)
+        print(f"[INFO] Subscribed to {MQTT_PRESENCE_TOPIC}", file=sys.stderr, flush=True)
+
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id="greensky-publisher")
+    client.on_connect = on_connect
     client.on_message = on_message
     client.on_subscribe = on_subscribe
 
-    connected = False
-    while not connected:
+    while True:
         try:
             client.connect(MQTT_BROKER, MQTT_PORT, keepalive=60)
             client.loop_start()
-            result = client.subscribe(MQTT_PRESENCE_TOPIC, qos=0)
-            connected = True
-            print(f"[INFO] Connected to MQTT broker", file=sys.stderr, flush=True)
-            print(f"[INFO] Subscribed to {MQTT_PRESENCE_TOPIC}: {result}", file=sys.stderr, flush=True)
+            time.sleep(2)  # wait for on_connect
+            break
         except Exception as e:
             print(f"[WARN] Connect failed: {e}", file=sys.stderr, flush=True)
             time.sleep(5)
