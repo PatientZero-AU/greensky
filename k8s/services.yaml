@@ -29,3 +29,16 @@ spec:
     - port: 80
       targetPort: 80
       protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mosquitto
+  namespace: greensky
+spec:
+  type: ExternalName
+  externalName: mosquitto.barleycorn.svc.cluster.local
+  ports:
+    - port: 9001
+      targetPort: 9001
+      protocol: TCP
