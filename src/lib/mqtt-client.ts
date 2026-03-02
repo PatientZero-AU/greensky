@@ -51,7 +51,8 @@ export function createMqttClient(
     presenceTimer = setInterval(sendPresence, PRESENCE_INTERVAL);
   });
 
-  client.on("message", (_topic: string, payload: Buffer) => {
+  client.on("message", (topic: string, payload: Buffer) => {
+    if (topic !== TOPIC) return; // ignore presence echo
     try {
       const data = JSON.parse(payload.toString()) as FlightMessage;
       onMessage(data);
