@@ -123,7 +123,17 @@ def main():
             print(f"[WARN] MQTT connection failed, retrying in 5s: {e}", file=sys.stderr)
             time.sleep(5)
 
-    last_fetch = 0
+    # Always do one initial fetch so retained message is available
+    print("[INFO] Initial fetch for retained message...", file=sys.stderr)
+    raw = fetch_flights()
+    if raw:
+        processed = process_flights(raw)
+        payload = json.dumps(processed)
+        client.publish(MQTT_TOPIC, payload, qos=0, retain=True)
+        flight_count = len(processed.get("flights", []))
+        print(f"[INFO] Initial publish: {flight_count} flights (retained)", file=sys.stderr)
+
+    last_fetch = time.time()
     idle_logged = False
 
     while True:
@@ -137,7 +147,7 @@ def main():
                     if raw:
                         processed = process_flights(raw)
                         payload = json.dumps(processed)
-                        client.publish(MQTT_TOPIC, payload, qos=0)
+                        client.publish(MQTT_TOPIC, payload, qos=0, retain=True)
                         flight_count = len(processed.get("flights", []))
                         print(f"[INFO] Published {flight_count} flights ({viewer_count} viewer(s))", file=sys.stderr)
                     else:
