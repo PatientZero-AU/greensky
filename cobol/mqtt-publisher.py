@@ -32,11 +32,11 @@ ADSB_URL = "https://api.adsb.lol/v2/lat/-25.27/lon/133.77/dist/2000"
 last_viewer_ping = 0
 
 
-def on_message(client, userdata, msg):
+def on_message(client, userdata, msg, properties=None):
     global last_viewer_ping
     if msg.topic == MQTT_PRESENCE_TOPIC:
         last_viewer_ping = time.time()
-        print(f"[INFO] Viewer ping received", file=sys.stderr)
+        print(f"[INFO] Viewer ping received", file=sys.stderr, flush=True)
 
 
 def has_viewers():
@@ -53,7 +53,7 @@ def fetch_flights():
             return None
         return json.loads(result.stdout)
     except Exception as e:
-        print(f"[ERROR] Fetch failed: {e}", file=sys.stderr)
+        print(f"[ERROR] Fetch failed: {e}", file=sys.stderr, flush=True)
         return None
 
 
@@ -100,17 +100,17 @@ def publish(client):
         payload = json.dumps(processed)
         client.publish(MQTT_TOPIC, payload, qos=0, retain=True)
         count = len(processed.get("flights", []))
-        print(f"[INFO] Published {count} flights", file=sys.stderr)
+        print(f"[INFO] Published {count} flights", file=sys.stderr, flush=True)
     else:
-        print("[WARN] No data, skipping", file=sys.stderr)
+        print("[WARN] No data, skipping", file=sys.stderr, flush=True)
 
 
 def main():
     global last_viewer_ping
 
-    print("[INFO] GreenSky MQTT Publisher starting...", file=sys.stderr)
-    print(f"[INFO] Broker: {MQTT_BROKER}:{MQTT_PORT}", file=sys.stderr)
-    print(f"[INFO] Fetch interval: {FETCH_INTERVAL}s (when viewers active)", file=sys.stderr)
+    print("[INFO] GreenSky MQTT Publisher starting...", file=sys.stderr, flush=True)
+    print(f"[INFO] Broker: {MQTT_BROKER}:{MQTT_PORT}", file=sys.stderr, flush=True)
+    print(f"[INFO] Fetch interval: {FETCH_INTERVAL}s (when viewers active)", file=sys.stderr, flush=True)
 
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id="greensky-publisher")
     client.on_message = on_message
@@ -120,15 +120,16 @@ def main():
         try:
             client.connect(MQTT_BROKER, MQTT_PORT, keepalive=60)
             client.loop_start()
-            client.subscribe(MQTT_PRESENCE_TOPIC, qos=0)
+            result = client.subscribe(MQTT_PRESENCE_TOPIC, qos=0)
             connected = True
-            print("[INFO] Connected to MQTT broker", file=sys.stderr)
+            print(f"[INFO] Connected to MQTT broker", file=sys.stderr, flush=True)
+            print(f"[INFO] Subscribed to {MQTT_PRESENCE_TOPIC}: {result}", file=sys.stderr, flush=True)
         except Exception as e:
-            print(f"[WARN] Connect failed: {e}", file=sys.stderr)
+            print(f"[WARN] Connect failed: {e}", file=sys.stderr, flush=True)
             time.sleep(5)
 
     # Initial fetch so retained message exists
-    print("[INFO] Initial fetch for retained message...", file=sys.stderr)
+    print("[INFO] Initial fetch for retained message...", file=sys.stderr, flush=True)
     publish(client)
 
     last_fetch = time.time()
@@ -139,7 +140,7 @@ def main():
 
         if has_viewers():
             if was_idle:
-                print("[INFO] Viewer connected — fetching immediately", file=sys.stderr)
+                print("[INFO] Viewer connected — fetching immediately", file=sys.stderr, flush=True)
                 publish(client)
                 last_fetch = now
                 was_idle = False
@@ -149,7 +150,7 @@ def main():
             time.sleep(IDLE_POLL)
         else:
             if not was_idle:
-                print("[INFO] No viewers — idling", file=sys.stderr)
+                print("[INFO] No viewers — idling", file=sys.stderr, flush=True)
                 was_idle = True
             time.sleep(IDLE_POLL)
 
