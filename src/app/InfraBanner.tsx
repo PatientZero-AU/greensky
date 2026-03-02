@@ -33,7 +33,7 @@ export default function InfraBanner() {
           rel="noopener noreferrer"
           className="infra-brand-link"
         >
-          PatientZero — Australian AI &amp; Software Consultancy
+          Patient Zero — 10,000 Spoons
         </a>
       </div>
     </div>

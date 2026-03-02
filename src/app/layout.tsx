@@ -77,7 +77,7 @@ export default function RootLayout({
       "@type": "Organization",
       name: "PatientZero",
       url: "https://paul-seymour.com",
-      description: "Australian AI & Software Consultancy",
+      description: "10,000 Spoons",
     },
     offers: {
       "@type": "Offer",
