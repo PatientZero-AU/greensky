@@ -140,6 +140,9 @@ def main():
         now = time.time()
 
         if has_active_viewers():
+            # If we were idle, fetch immediately on first viewer
+            if idle_logged:
+                last_fetch = 0  # force immediate fetch
             idle_logged = False
             if (now - last_fetch) >= FETCH_INTERVAL:
                 try:
