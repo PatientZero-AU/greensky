@@ -32,6 +32,10 @@ ADSB_URL = "https://api.adsb.lol/v2/lat/-25.27/lon/133.77/dist/2000"
 last_viewer_ping = 0
 
 
+def on_subscribe(client, userdata, mid, reason_code_list, properties=None):
+    print(f"[INFO] on_subscribe fired: mid={mid}", file=sys.stderr, flush=True)
+
+
 def on_message(client, userdata, msg, properties=None):
     global last_viewer_ping
     if msg.topic == MQTT_PRESENCE_TOPIC:
@@ -114,6 +118,7 @@ def main():
 
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id="greensky-publisher")
     client.on_message = on_message
+    client.on_subscribe = on_subscribe
 
     connected = False
     while not connected:
