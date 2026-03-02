@@ -66,7 +66,7 @@ def process_flights(data):
             "callsign": callsign,
             "lat": round(float(lat), 3),
             "lon": round(float(lon), 3),
-            "altitude": round(float(ac.get("alt_baro", 0) or 0), 0),
+            "altitude": 0 if ac.get("alt_baro") == "ground" else round(float(ac.get("alt_baro", 0) or 0), 0),
             "velocity": round(float(ac.get("gs", 0) or 0), 1),
             "heading": round(float(ac.get("track", 0) or 0), 1),
             "origin": "",
