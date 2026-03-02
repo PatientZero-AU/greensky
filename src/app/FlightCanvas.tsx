@@ -37,7 +37,8 @@ export default function FlightCanvas() {
       const canvas = canvasRef.current;
       if (!canvas) return;
 
-      const pos = projectToCanvas(flight.lat, flight.lon, canvas.width, canvas.height);
+      const dpr = window.devicePixelRatio || 1;
+      const pos = projectToCanvas(flight.lat, flight.lon, canvas.width / dpr, canvas.height / dpr);
 
       if (existing) {
         existing.positions.push(pos);
