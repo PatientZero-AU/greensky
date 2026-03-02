@@ -28,7 +28,7 @@ export default function FlightCanvas() {
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
   const [mqttStatus, setMqttStatus] = useState<"connected" | "disconnected" | "error">("disconnected");
   const animFrameRef = useRef<number>(0);
-  const [airlineFilter, setAirlineFilter] = useState<string>("ALL");
+  const [airlineFilter, setAirlineFilter] = useState<string>("QFA");
   const allFlightsRef = useRef<FlightMessage | null>(null);
 
   const applyFilter = useCallback((data: FlightMessage, filter: string) => {
@@ -323,7 +323,7 @@ function drawHUD(
   // Bottom-right: timestamp
   ctx.textAlign = "right";
   if (timestamp) {
-    const ts = new Date(timestamp).toISOString().replace("T", " ").substring(0, 19) + " UTC";
+    const d = new Date(timestamp); const ts = d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0") + " " + String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0") + ":" + String(d.getSeconds()).padStart(2,"0");
     ctx.fillText(ts, lw - 12, lh - 12);
   } else {
     ctx.fillStyle = PHOSPHOR_DIM;
