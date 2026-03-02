@@ -1,0 +1,29 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: greensky-ingress
+  namespace: greensky
+  annotations:
+    cloudflare-tunnel-ingress-controller.strrl.dev/backend-protocol: http
+  labels:
+    app: greensky
+spec:
+  ingressClassName: cloudflare-tunnel
+  rules:
+    - host: greensky.electricsheep.au
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: greensky-web
+                port:
+                  number: 3000
+          - path: /mqtt/
+            pathType: Prefix
+            backend:
+              service:
+                name: mosquitto
+                port:
+                  number: 9001
