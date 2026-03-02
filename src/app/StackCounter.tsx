@@ -2,23 +2,26 @@
 
 const TECHNOLOGIES = [
   "GnuCOBOL",
-  "Docker",
-  "K3s",
-  "Longhorn",
-  "Cloudflare Tunnel",
+  "Python",
   "MQTT",
   "Mosquitto",
+  "WebSockets",
+  "Docker",
+  "K3s",
+  "Longhorn Storage",
+  "Cloudflare Tunnel",
   "Next.js",
   "React",
   "TypeScript",
   "Tailwind CSS",
   "Canvas API",
-  "nginx Ingress",
+  "nginx",
   "ARM64 Linux",
-  "OpenSky API",
+  "Raspberry Pi 5",
+  "adsb.lol API",
 ];
 
-const VENDOR_COUNT = 12;
+const VENDOR_COUNT = 15;
 
 export default function StackCounter() {
   return (
