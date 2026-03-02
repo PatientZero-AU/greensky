@@ -19,11 +19,4 @@ spec:
               service:
                 name: greensky-web
                 port:
-                  number: 3000
-          - path: /mqtt/
-            pathType: Prefix
-            backend:
-              service:
-                name: mosquitto
-                port:
-                  number: 9001
+                  number: 8080

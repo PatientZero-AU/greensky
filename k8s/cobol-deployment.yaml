@@ -15,6 +15,8 @@ spec:
       labels:
         app: greensky-cobol
     spec:
+      imagePullSecrets:
+        - name: regcred
       containers:
         - name: cobol-publisher
           image: registry2.palmtech.com.au/greensky-cobol:latest
@@ -25,22 +27,9 @@ spec:
               value: "1883"
             - name: FETCH_INTERVAL
               value: "30"
-            - name: OPENSKY_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: opensky-credentials
-                  key: username
-                  optional: true
-            - name: OPENSKY_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: opensky-credentials
-                  key: password
-                  optional: true
           resources:
             requests:
               cpu: 50m
               memory: 64Mi
             limits:
-              cpu: 200m
               memory: 128Mi
