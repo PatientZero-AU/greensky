@@ -30,7 +30,7 @@ export default function CrtMonitor({ children }: { children: ReactNode }) {
 
         {/* Bottom bezel with brand and LED */}
         <div className="crt-bezel-bottom">
-          <span className="crt-brand">PatientZero™</span>
+          <span className="crt-brand">Patient Zero™</span>
           <div className="crt-power-led" title="Power">
             <div className="crt-led-glow" />
           </div>
