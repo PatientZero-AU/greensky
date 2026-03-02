@@ -28,50 +28,49 @@ export default function FlightCanvas() {
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
   const [mqttStatus, setMqttStatus] = useState<"connected" | "disconnected" | "error">("disconnected");
   const animFrameRef = useRef<number>(0);
+  const [airlineFilter, setAirlineFilter] = useState<string>("ALL");
+  const allFlightsRef = useRef<FlightMessage | null>(null);
 
-  const handleMessage = useCallback((data: FlightMessage) => {
+  const applyFilter = useCallback((data: FlightMessage, filter: string) => {
     const trails = flightsRef.current;
-
-    data.flights.forEach((flight: FlightData) => {
-      const existing = trails.get(flight.callsign);
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-
-      const dpr = window.devicePixelRatio || 1;
-      const pos = projectToCanvas(flight.lat, flight.lon, canvas.width / dpr, canvas.height / dpr);
-
-      if (existing) {
-        existing.positions.push(pos);
-        if (existing.positions.length > TRAIL_LENGTH) {
-          existing.positions.shift();
-        }
-        existing.heading = flight.heading;
-        existing.altitude = flight.altitude;
-        existing.velocity = flight.velocity;
-        existing.on_ground = flight.on_ground;
-      } else {
-        trails.set(flight.callsign, {
-          positions: [pos],
-          callsign: flight.callsign,
-          heading: flight.heading,
-          altitude: flight.altitude,
-          velocity: flight.velocity,
-          on_ground: flight.on_ground,
-        });
-      }
+    const filtered = filter === "ALL" ? data.flights : data.flights.filter((f: FlightData) => {
+      const prefix = f.callsign.trim().substring(0, 3).toUpperCase();
+      if (filter === "VAU") return prefix === "VAU" || prefix === "VOZ";
+      return prefix === filter;
     });
 
-    // Remove flights no longer in the update
-    const currentCallsigns = new Set(data.flights.map((f: FlightData) => f.callsign));
-    for (const key of trails.keys()) {
-      if (!currentCallsigns.has(key)) {
-        trails.delete(key);
-      }
-    }
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const dpr = window.devicePixelRatio || 1;
 
-    setFlightCount(data.flights.length);
+    trails.clear();
+    filtered.forEach((flight: FlightData) => {
+      const pos = projectToCanvas(flight.lat, flight.lon, canvas.width / dpr, canvas.height / dpr);
+      trails.set(flight.callsign, {
+        positions: [pos],
+        callsign: flight.callsign,
+        heading: flight.heading,
+        altitude: flight.altitude,
+        velocity: flight.velocity,
+        on_ground: flight.on_ground,
+      });
+    });
+
+    setFlightCount(filtered.length);
     setLastUpdate(data.timestamp);
   }, []);
+
+  const handleMessage = useCallback((data: FlightMessage) => {
+    allFlightsRef.current = data;
+    applyFilter(data, airlineFilter);
+  }, [airlineFilter, applyFilter]);
+
+  // Re-apply filter when it changes
+  useEffect(() => {
+    if (allFlightsRef.current) {
+      applyFilter(allFlightsRef.current, airlineFilter);
+    }
+  }, [airlineFilter, applyFilter]);
 
   const drawFrame = useCallback(() => {
     const canvas = canvasRef.current;
@@ -146,6 +145,18 @@ export default function FlightCanvas() {
   return (
     <div ref={containerRef} className="crt-canvas-container">
       <canvas ref={canvasRef} className="crt-canvas" />
+      {/* Airline filter radio buttons */}
+      <div className="airline-filter">
+        {["ALL", "QFA", "VAU", "JST", "QJE"].map((code) => (
+          <button
+            key={code}
+            className={`filter-btn ${airlineFilter === code ? "active" : ""}`}
+            onClick={() => setAirlineFilter(code)}
+          >
+            {code === "ALL" ? "ALL" : code === "QFA" ? "QANTAS" : code === "VAU" ? "VIRGIN" : code === "JST" ? "JETSTAR" : "QANTASLINK"}
+          </button>
+        ))}
+      </div>
       {/* Flight count overlay for screen readers / SEO */}
       <div className="sr-only" aria-live="polite">
         {flightCount} flights tracked. Last updated {lastUpdate ?? "awaiting data"}.
