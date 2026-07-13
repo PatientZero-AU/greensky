@@ -1,0 +1,130 @@
+# ============================================================
+# .claudeignore — global default for all Claude Code sessions
+# Research-backed best practice (2026-07-13)
+#
+# Philosophy:
+#   - Exclude anything with no SOURCE SIGNAL for code tasks
+#   - .gitignore already handles most build/dep exclusions
+#   - This adds: git history, minified, binaries, secrets,
+#     migration history, large data, test fixtures
+#
+# NOTE: Claude can still READ these files if explicitly asked.
+# This only prevents upfront context loading.
+# ============================================================
+
+# Git internals (huge, zero signal for code tasks)
+.git/
+
+# Dependencies (usually in .gitignore too — belt & suspenders)
+node_modules/
+vendor/
+.vendor/
+
+# Build outputs
+dist/
+build/
+out/
+.next/
+.nuxt/
+.output/
+.turbo/
+.cache/
+
+# .NET build artifacts
+bin/
+obj/
+*.dll
+*.pdb
+*.exe
+*.nupkg
+*.suo
+*.user
+
+# Minified / compiled (no readable source signal)
+*.min.js
+*.min.css
+*.map
+*.bundle.js
+
+# Test results & coverage (not source)
+coverage/
+TestResults/
+*.trx
+__snapshots__/
+*.snap
+
+# Lock files (huge, auto-generated, no decision signal)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+poetry.lock
+Gemfile.lock
+*.lock
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+
+# Secrets (belt & suspenders — settings.json deny list is primary)
+.env
+.env.*
+*.pem
+*.key
+*.cert
+*.crt
+secrets/
+
+# Binary media (zero text signal)
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.webp
+*.ico
+*.woff
+*.woff2
+*.ttf
+*.eot
+*.otf
+*.mp4
+*.mp3
+*.wav
+*.pdf
+*.zip
+*.tar.gz
+*.gz
+*.tar
+
+# Logs & local DBs
+*.log
+logs/
+*.db
+*.sqlite
+*.sqlite3
+
+# IDE & OS
+.vs/
+.vscode/
+.idea/
+*.suo
+.DS_Store
+Thumbs.db
+
+# Infra / Terraform state
+.terraform/
+*.tfstate
+*.tfstate.backup
+.terraform.lock.hcl
+
+# Migration history (huge, auto-generated SQL — read on demand)
+# Uncomment if migrations are rarely needed in context:
+# migrations/
+
+# Large data / datasets
+data/
+datasets/
